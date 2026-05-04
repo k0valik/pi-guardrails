@@ -35,6 +35,3 @@ result-*
 
 # Husky
 .husky/_
-
-# Pi local session settings
-.pi/settings.json
