@@ -7,24 +7,47 @@ const HOME = homedir();
 
 describe("extractBashPathCandidates", () => {
   describe("when a command has regular expression arguments", () => {
-    it("extracts sed expressions as path-like (they contain /)", async () => {
-      // sed 's/abc/{2,3}/g' contains / so maybePathLike returns true.
-      // This is a known false positive — the expression structurally
-      // resembles a path and is safe (will miss policy matching).
-      // Note: bare filename "file" has no / so it is not extracted
-      // (known false negative for bare filenames).
+    it("ignores sed expressions and extracts file operands", async () => {
       const result = await extractBashPathCandidates(
         "sed 's/abc/{2,3}/g' ./file",
         CWD,
       );
-      expect(result).toContain("/work/project/file");
+      expect(result).toEqual(["/work/project/file"]);
+    });
+
+    it("ignores grep patterns and extracts file operands", async () => {
+      const result = await extractBashPathCandidates(
+        "grep '/api/v1' ./src",
+        CWD,
+      );
+      expect(result).toEqual(["/work/project/src"]);
+    });
+
+    it("ignores ripgrep patterns and extracts search roots", async () => {
+      const result = await extractBashPathCandidates("rg '/api/v1' ./src", CWD);
+      expect(result).toEqual(["/work/project/src"]);
+    });
+
+    it("ignores jq filters and extracts file operands", async () => {
+      const result = await extractBashPathCandidates(
+        "jq '.path | test(\"^/tmp/\")' ./data.json",
+        CWD,
+      );
+      expect(result).toEqual(["/work/project/data.json"]);
+    });
+
+    it("ignores interpreter inline code", async () => {
+      const result = await extractBashPathCandidates(
+        "python3 -c 'open(\"/etc/passwd\").read()'",
+        CWD,
+      );
+      expect(result).toEqual([]);
     });
   });
 
   // Regression: github issue #32 — awk regex patterns should not be
-  // treated as file paths. Currently fails because the awk program
-  // token '/aaa/{flag=1} flag{print}' contains / and passes maybePathLike.
-  it.fails("does not extract awk regex patterns as paths", async () => {
+  // treated as file paths.
+  it("does not extract awk regex patterns as paths", async () => {
     const result = await extractBashPathCandidates(
       "awk '/aaa/{flag=1} flag{print}' test.txt",
       CWD,

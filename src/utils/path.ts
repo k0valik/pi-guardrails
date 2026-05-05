@@ -88,6 +88,7 @@ export function toStorageForm(absPath: string, isDirectory: boolean): string {
  */
 export function maybePathLike(token: string): boolean {
   if (!token) return false;
+
   if (token.includes("/")) return true;
   if (token.includes("\\")) return true;
   if (/^[A-Za-z]:[\\/]/.test(token)) return true;

@@ -285,10 +285,9 @@ describe("maybePathLike", () => {
     expect(maybePathLike(input)).toBe(expected);
   });
 
-  // Regression: github issue #32 — awk regex patterns should not
-  // be treated as paths. Currently passes maybePathLike because
-  // the awk program token contains /.
-  it.fails("does not treat awk regex as path-like", () => {
-    expect(maybePathLike("/aaa/{flag=1} flag{print}")).toBe(false);
+  // maybePathLike is command-agnostic. Command-specific regex/code args are
+  // filtered by extractBashPathCandidates before this fallback heuristic runs.
+  it("treats awk-looking regex text as path-like without command context", () => {
+    expect(maybePathLike("/aaa/{flag=1} flag{print}")).toBe(true);
   });
 });

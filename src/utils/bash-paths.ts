@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { parse } from "@aliou/sh";
+import { classifyCommandArgs } from "./command-args";
 import { expandGlob, hasGlobChars } from "./glob-expander";
 import { expandHomePath, maybePathLike } from "./path";
 import { walkCommands, wordToString } from "./shell-utils";
@@ -48,8 +49,11 @@ export async function extractBashPathCandidates(
 
     walkCommands(ast, (cmd) => {
       const words = (cmd.words ?? []).map(wordToString);
-      for (let i = 1; i < words.length; i++) {
-        pending.push(addCandidate(words[i] as string));
+      const commandName = words[0];
+      if (commandName) {
+        for (const arg of classifyCommandArgs(commandName, words.slice(1))) {
+          pending.push(addCandidate(arg.token, arg.forcePath));
+        }
       }
       for (const redir of cmd.redirects ?? []) {
         pending.push(addCandidate(wordToString(redir.target), true));
