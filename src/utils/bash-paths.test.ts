@@ -21,6 +21,18 @@ describe("extractBashPathCandidates", () => {
     });
   });
 
+  // Regression: github issue #32 — awk regex patterns should not be
+  // treated as file paths. Currently fails because the awk program
+  // token '/aaa/{flag=1} flag{print}' contains / and passes maybePathLike.
+  it.fails("does not extract awk regex patterns as paths", async () => {
+    const result = await extractBashPathCandidates(
+      "awk '/aaa/{flag=1} flag{print}' test.txt",
+      CWD,
+    );
+    // The awk program should NOT be treated as a path
+    expect(result).toEqual([]);
+  });
+
   describe("when command has path arguments", () => {
     it("extracts a single absolute path", async () => {
       expect(await extractBashPathCandidates("cat /etc/hosts", CWD)).toEqual([
