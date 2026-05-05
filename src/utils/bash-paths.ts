@@ -1,24 +1,8 @@
 import { resolve } from "node:path";
 import { parse } from "@aliou/sh";
 import { expandGlob, hasGlobChars } from "./glob-expander";
-import { expandHomePath } from "./path";
+import { expandHomePath, maybePathLike } from "./path";
 import { walkCommands, wordToString } from "./shell-utils";
-
-/**
- * Heuristic: is this token likely a filesystem path?
- * Intentionally conservative — only structural signals.
- * Known false positives: "application/json", URL paths. These cause
- * spurious prompts in ask mode but are safe (better to over-prompt than miss).
- * Known false negatives: bare filenames without path separators (e.g. "README.md").
- * These are usually cwd-relative and would pass the boundary check anyway.
- */
-function maybePathLike(token: string): boolean {
-  if (token.includes("/")) return true;
-  if (token.includes("\\")) return true;
-  if (/^[A-Za-z]:[\\/]/.test(token)) return true;
-  if (token.startsWith("~")) return true;
-  return false;
-}
 
 async function expandCandidate(
   candidate: string,

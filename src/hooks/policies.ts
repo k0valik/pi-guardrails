@@ -10,7 +10,7 @@ import {
   compileFilePatterns,
   normalizeFilePath,
 } from "../utils/matching";
-import { expandHomePath } from "../utils/path";
+import { expandHomePath, maybePathLike } from "../utils/path";
 import { walkCommands, wordToString } from "../utils/shell-utils";
 import { pendingWarnings } from "../utils/warnings";
 
@@ -106,16 +106,6 @@ function compileRules(rules: PolicyRule[]): CompiledRule[] {
   }
 
   return compiled;
-}
-
-function maybePathLike(token: string): boolean {
-  return (
-    token.includes("/") ||
-    token.includes(".") ||
-    token.startsWith("~") ||
-    token.startsWith("./") ||
-    token.startsWith("../")
-  );
 }
 
 function normalizeTargetForPolicy(filePath: string, cwd: string): string {

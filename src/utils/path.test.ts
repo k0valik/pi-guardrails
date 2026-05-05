@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   expandHomePath,
   isWithinBoundary,
+  maybePathLike,
   normalizeForDisplay,
   resolveFromCwd,
   toStorageForm,
@@ -173,5 +174,114 @@ describe("toStorageForm", () => {
     },
   ])("when $desc, returns $expected", ({ absPath, isDirectory, expected }) => {
     expect(toStorageForm(absPath, isDirectory)).toBe(expected);
+  });
+});
+
+describe("maybePathLike", () => {
+  it.each([
+    // --- True cases: structural path signals ---
+    {
+      desc: "absolute Unix path",
+      input: "/etc/hosts",
+      expected: true,
+    },
+    {
+      desc: "relative path with /",
+      input: "src/index.ts",
+      expected: true,
+    },
+    {
+      desc: "./ prefix",
+      input: "./foo",
+      expected: true,
+    },
+    {
+      desc: "../ prefix",
+      input: "../bar",
+      expected: true,
+    },
+    {
+      desc: "backslash path (Windows)",
+      input: "foo\\bar",
+      expected: true,
+    },
+    {
+      desc: "Windows drive letter",
+      input: "C:\\tmp",
+      expected: true,
+    },
+    {
+      desc: "Windows drive with forward slash",
+      input: "C:/tmp",
+      expected: true,
+    },
+    {
+      desc: "tilde home path",
+      input: "~/code",
+      expected: true,
+    },
+    {
+      desc: "MIME type (has / — safe false positive)",
+      input: "application/json",
+      expected: true,
+    },
+    {
+      desc: "regular expression with braces (has / — safe false positive)",
+      input: "/abc/{2,3}",
+      expected: true,
+    },
+    // --- False cases: non-path tokens ---
+    {
+      desc: "empty string",
+      input: "",
+      expected: false,
+    },
+    {
+      desc: "simple command name",
+      input: "rm",
+      expected: false,
+    },
+    {
+      desc: "flag",
+      input: "--force",
+      expected: false,
+    },
+    {
+      desc: "short flag",
+      input: "-rf",
+      expected: false,
+    },
+    {
+      desc: "bare word",
+      input: "build",
+      expected: false,
+    },
+    {
+      desc: "bare tilde (no slash)",
+      input: "~",
+      expected: false,
+    },
+    {
+      desc: "version number",
+      input: "3.14",
+      expected: false,
+    },
+    {
+      desc: "domain name",
+      input: "example.com",
+      expected: false,
+    },
+    {
+      desc: "bare filename with extension",
+      input: "README.md",
+      expected: false,
+    },
+    {
+      desc: "dotfile without slash",
+      input: ".env",
+      expected: false,
+    },
+  ])("when $desc, returns $expected", ({ input, expected }) => {
+    expect(maybePathLike(input)).toBe(expected);
   });
 });

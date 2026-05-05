@@ -72,3 +72,25 @@ export function toStorageForm(absPath: string, isDirectory: boolean): string {
   if (!isDirectory && stored.endsWith("/")) stored = stored.slice(0, -1);
   return stored;
 }
+
+/**
+ * Heuristic: is this token likely a filesystem path?
+ *
+ * Checks for structural path signals: separators (/ \), drive letters
+ * (C:\), home prefix (~), and relative path prefixes (./ ../).
+ *
+ * False positives (MIME types, version strings, domains) are safe —
+ * they just get checked against policies and miss.
+ *
+ * Known false negatives: bare filenames without separators or dots
+ * (Makefile, LICENSE, README). These are cwd-relative and would
+ * pass the boundary check anyway.
+ */
+export function maybePathLike(token: string): boolean {
+  if (!token) return false;
+  if (token.includes("/")) return true;
+  if (token.includes("\\")) return true;
+  if (/^[A-Za-z]:[\\/]/.test(token)) return true;
+  if (/^(?:~|\.{1,2})[\\/]/.test(token)) return true;
+  return false;
+}

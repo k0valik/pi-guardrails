@@ -6,6 +6,21 @@ const CWD = "/work/project";
 const HOME = homedir();
 
 describe("extractBashPathCandidates", () => {
+  describe("when a command has regular expression arguments", () => {
+    it("extracts sed expressions as path-like (they contain /)", async () => {
+      // sed 's/abc/{2,3}/g' contains / so maybePathLike returns true.
+      // This is a known false positive — the expression structurally
+      // resembles a path and is safe (will miss policy matching).
+      // Note: bare filename "file" has no / so it is not extracted
+      // (known false negative for bare filenames).
+      const result = await extractBashPathCandidates(
+        "sed 's/abc/{2,3}/g' ./file",
+        CWD,
+      );
+      expect(result).toContain("/work/project/file");
+    });
+  });
+
   describe("when command has path arguments", () => {
     it("extracts a single absolute path", async () => {
       expect(await extractBashPathCandidates("cat /etc/hosts", CWD)).toEqual([
