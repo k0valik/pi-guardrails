@@ -24,7 +24,7 @@ After installing, run the onboarding command to choose a starting setup:
 /guardrails:onboarding
 ```
 
-![Guardrails onboarding walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/onboarding.gif)
+[![Guardrails onboarding walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/onboarding.gif)](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/onboarding.mp4)
 
 You can change everything later with:
 
@@ -40,7 +40,7 @@ The `guardrails` extension owns file protection policies and the user-facing com
 
 Use it to protect files like `.env`, private keys, local credentials, generated logs, database dumps, or any project-specific path you do not want Pi to read or modify without clear intent.
 
-![Guardrails policies and settings walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/policies.gif)
+[![Guardrails policies and settings walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/policies.gif)](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/policies.mp4)
 
 Useful commands:
 
@@ -56,7 +56,7 @@ The `path-access` extension checks tool calls that target paths outside the curr
 
 It can allow, block, or ask before Pi accesses files elsewhere on your machine. In ask mode, you can allow one file or a directory once, for the session, or always.
 
-![Guardrails path access prompt walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/path-access.gif)
+[![Guardrails path access prompt walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/path-access.gif)](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/path-access.mp4)
 
 ### permission-gate
 
@@ -64,7 +64,7 @@ The `permission-gate` extension detects dangerous bash commands before they run.
 
 It catches built-in risky patterns like recursive deletes, privileged commands, disk formatting, broad permission changes, and configured custom patterns. You can allow once, allow for the session, deny, or configure auto-deny rules.
 
-![Guardrails permission gate walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/permission-gate.gif)
+[![Guardrails permission gate walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/permission-gate.gif)](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/permission-gate.mp4)
 
 ## Configuration
 
@@ -89,7 +89,7 @@ Use the examples command to add common policy and command presets without replac
 /guardrails:examples
 ```
 
-![Guardrails examples command walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/examples.gif)
+[![Guardrails examples command walkthrough](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/examples.gif)](https://assets.aliou.me/pi-extensions/demos/guardrails/v0.12.0/examples.mp4)
 
 The available presets live in [`extensions/guardrails/commands/settings/examples.ts`](extensions/guardrails/commands/settings/examples.ts).
 
