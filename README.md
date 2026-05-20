@@ -97,6 +97,8 @@ The available presets live in [`extensions/guardrails/commands/settings/examples
 
 Pi is designed to make agent safety extensible. Guardrails focuses on deterministic, configurable file policies, outside-workspace path access, and dangerous-command prompts. Other packages tend to fall into two useful groups.
 
+See [pi.dev/packages](https://pi.dev/packages) for the full registry of Pi extensions.
+
 ### Make one yourself!
 
 If Guardrails or the alternatives below do not fit your needs, you can also make your own. Start from the [Pi permission gate example](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/examples/extensions/permission-gate.ts), then ask Pi to customize it for your workflow.
