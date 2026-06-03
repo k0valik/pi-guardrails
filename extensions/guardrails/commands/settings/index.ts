@@ -441,13 +441,15 @@ export function registerGuardrailsSettings(
 
       if (scope === "global") {
         featureItems.push({
-          id: "onboarding.run",
+          id: "onboarding.completed",
           label: "Onboarding status",
-          description: "Use /guardrails:onboarding to run onboarding",
+          description:
+            "Reset to pending to re-run onboarding (takes effect after reload)",
           currentValue:
             scopedConfig.onboarding?.completed === true
               ? "completed"
               : "pending",
+          values: ["completed", "pending"],
         });
       }
 
@@ -609,6 +611,20 @@ export function registerGuardrailsSettings(
         updated.permissionGate = {
           ...updated.permissionGate,
           requireConfirmation: newValue === "on",
+        };
+        return updated;
+      }
+
+      if (id === "onboarding.completed") {
+        updated.onboarding = {
+          ...updated.onboarding,
+          completed: newValue === "completed",
+          completedAt:
+            newValue === "completed"
+              ? (updated.onboarding?.completedAt ?? new Date().toISOString())
+              : undefined,
+          version:
+            newValue === "completed" ? updated.onboarding?.version : undefined,
         };
         return updated;
       }
