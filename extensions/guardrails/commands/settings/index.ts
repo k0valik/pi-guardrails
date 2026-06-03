@@ -592,5 +592,29 @@ export function registerGuardrailsSettings(
         },
       ];
     },
+
+    onSettingChange: (id, newValue, config) => {
+      const updated = structuredClone(config);
+
+      if (id.startsWith("features.")) {
+        const featureKey = id.slice("features.".length);
+        updated.features = {
+          ...updated.features,
+          [featureKey]: newValue === "enabled",
+        };
+        return updated;
+      }
+
+      if (id === "permissionGate.requireConfirmation") {
+        updated.permissionGate = {
+          ...updated.permissionGate,
+          requireConfirmation: newValue === "on",
+        };
+        return updated;
+      }
+
+      // Fall through to default string storage for enums (pathAccess.mode, etc.)
+      return null;
+    },
   });
 }

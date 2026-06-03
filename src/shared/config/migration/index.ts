@@ -7,6 +7,7 @@ import * as envFilesToPolicies from "./004-env-files-to-policies";
 import * as normalizeAllowedPaths from "./005-normalize-allowed-paths";
 import * as applyBuiltinDefaults from "./006-apply-builtin-defaults";
 import * as markOnboardingDone from "./007-mark-onboarding-done";
+import * as normalizeStringBooleans from "./008-normalize-string-booleans";
 
 export { CURRENT_VERSION } from "./version";
 
@@ -35,6 +36,11 @@ export const migrations: Migration<GuardrailsConfig>[] = [
     name: "normalize-allowed-paths",
     shouldRun: normalizeAllowedPaths.shouldRun,
     run: normalizeAllowedPaths.run,
+  },
+  {
+    name: "normalize-string-booleans",
+    shouldRun: normalizeStringBooleans.shouldRun,
+    run: normalizeStringBooleans.run,
   },
 ];
 
