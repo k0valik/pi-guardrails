@@ -1,9 +1,9 @@
 {
-  "name": "@aliou/pi-guardrails",
+  "name": "pi-guardrails",
   "version": "0.13.2",
   "license": "MIT",
   "type": "module",
-  "private": false,
+  "private": true,
   "keywords": [
     "pi-package",
     "pi-extension",
@@ -13,7 +13,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/aliou/pi-guardrails"
+    "url": "https://github.com/k0valik/pi-guardrails"
   },
   "pi": {
     "extensions": [
@@ -22,9 +22,6 @@
       "./extensions/permission-gate/index.ts"
     ],
     "video": "https://assets.aliou.me/github/aliou/pi-guardrails/demo.mp4"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "files": [
     "src",
