@@ -1,14 +1,8 @@
 # pi-guardrails
 
-Personal fork of guardrails for Pi - security hooks to prevent dangerous operations.
+Public Pi extension providing security hooks to prevent potentially dangerous operations. People could be using this, so consider backwards compatibility when making changes.
 
 Pi is pre-1.0.0, so breaking changes can happen between Pi versions. This extension must stay up to date with Pi or things will break.
-
-## IMPORTANT GUIDELINES
-
-- **No npm, no npx, strictly pnpm only.** All package management must go through `pnpm`. Never use `npm install`, `npx`, or any npm-related commands.
-- This is an operating fork of https://github.com/k0valik/pi-guardrails - kept close to upstream for easy syncing.
-- Settings are in `my-guardrails-settings.json`, which is the canonical config.
 
 ## Stack
 

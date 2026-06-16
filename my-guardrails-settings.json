@@ -1,0 +1,548 @@
+{
+  "$schema": "https://unpkg.com/@aliou/pi-guardrails@0.13.0/schema.json",
+  "version": "0.9.0-20260327",
+  "enabled": true,
+  "features": {
+    "policies": true,
+    "permissionGate": true,
+    "pathAccess": true
+  },
+  "pathAccess": {
+    "mode": "ask",
+    "allowedPaths": ["/dev/null", "/mnt/e/pi-mono/"]
+  },
+  "policies": {
+    "rules": [
+      {
+        "id": "deny-sensitive-files",
+        "description": "Block all access to environment and credential files",
+        "patterns": [
+          {
+            "pattern": ".env"
+          },
+          {
+            "pattern": ".env.*"
+          },
+          {
+            "pattern": "**/.env"
+          },
+          {
+            "pattern": "**/.env.*"
+          },
+          {
+            "pattern": "**/.aws/**"
+          },
+          {
+            "pattern": "**/.ssh/**"
+          },
+          {
+            "pattern": "**/*.pem"
+          },
+          {
+            "pattern": "**/*.key"
+          },
+          {
+            "pattern": "**/credentials"
+          },
+          {
+            "pattern": "**/secrets/**"
+          },
+          {
+            "pattern": "~/.ssh/**"
+          },
+          {
+            "pattern": "~/.aws/**"
+          }
+        ],
+        "allowedPatterns": [
+          {
+            "pattern": ".env.example"
+          }
+        ],
+        "protection": "noAccess",
+        "onlyIfExists": true
+      }
+    ]
+  },
+  "permissionGate": {
+    "requireConfirmation": true,
+    "patterns": [
+      {
+        "pattern": "\\brm\\s+\\-rf\\b",
+        "regex": true,
+        "description": "recursive force delete - highly destructive"
+      },
+      {
+        "pattern": "\\brm\\s+\\-f\\b",
+        "regex": true,
+        "description": "force delete - destructive"
+      },
+      {
+        "pattern": "\\brm\\b",
+        "regex": true,
+        "description": "file deletion - potentially destructive"
+      },
+      {
+        "pattern": "\\bmv\\b",
+        "regex": true,
+        "description": "file move/rename - potentially destructive"
+      },
+      {
+        "pattern": "\\bshred\\b",
+        "regex": true,
+        "description": "secure file overwrite - unrecoverable data loss"
+      },
+      {
+        "pattern": "\\bmkfs\\.",
+        "regex": true,
+        "description": "filesystem format - highly destructive, wipes entire partitions"
+      },
+      {
+        "pattern": "\\bwipefs\\b",
+        "regex": true,
+        "description": "erasing filesystem signatures - makes data unrecoverable"
+      },
+      {
+        "pattern": "\\bblkdiscard\\b",
+        "regex": true,
+        "description": "discarding blocks on SSD - data loss"
+      },
+      {
+        "pattern": "\\btune2fs\\b",
+        "regex": true,
+        "description": "modifying filesystem parameters - risk of corruption"
+      },
+      {
+        "pattern": "\\bsudo\\b",
+        "regex": true,
+        "description": "privilege escalation - dangerous potential for system damage"
+      },
+      {
+        "pattern": "\\bsu\\b",
+        "regex": true,
+        "description": "user switching - alters security context"
+      },
+      {
+        "pattern": "(?:^|\\s|;|\\||&&|\\|\\|)exec(?:\\s|$)",
+        "regex": true,
+        "description": "exec shell builtin - process replacement (not -exec flag, not in strings)"
+      },
+      {
+        "pattern": "\\bchmod\\b",
+        "regex": true,
+        "description": "change permissions - risk of insecure access"
+      },
+      {
+        "pattern": "\\bchown\\b",
+        "regex": true,
+        "description": "change ownership - risk of insecure access"
+      },
+      {
+        "pattern": "\\bgh\\b",
+        "regex": true,
+        "description": "github actions - need confirmation"
+      },
+      {
+        "pattern": "\\bgh\\s+issue\\s+create\\b",
+        "regex": true,
+        "description": "creates GitHub issues in your name"
+      },
+      {
+        "pattern": "\\bgh\\s+pr\\s+create\\b",
+        "regex": true,
+        "description": "opens pull requests in your name"
+      },
+      {
+        "pattern": "\\bgh\\s+pr\\s+merge\\b",
+        "regex": true,
+        "description": "merges PRs (irreversible action in your name)"
+      },
+      {
+        "pattern": "\\bgh\\s+pr\\s+review\\s+\\-\\-approve\\b",
+        "regex": true,
+        "description": "approves PRs in your name"
+      },
+      {
+        "pattern": "\\bgh\\s+repo\\s+create\\b",
+        "regex": true,
+        "description": "creates new GitHub repositories"
+      },
+      {
+        "pattern": "\\bgh\\s+workflow\\s+run\\b",
+        "regex": true,
+        "description": "triggers CI/CD workflows in your name"
+      },
+      {
+        "pattern": "\\bgh\\s+release\\s+create\\b",
+        "regex": true,
+        "description": "creates releases/tags in your name"
+      },
+      {
+        "pattern": "\\bgh\\s+repo\\s+delete\\b",
+        "regex": true,
+        "description": "deletes GitHub repositories (destructive)"
+      },
+      {
+        "pattern": "\\bgit\\s+push\\s+\\-\\-force\\b",
+        "regex": true,
+        "description": "git force push - overwrites remote history"
+      },
+      {
+        "pattern": "\\bgit\\s+clean\\b",
+        "regex": true,
+        "description": "git clean operations - deletes untracked files"
+      },
+      {
+        "pattern": "\\bgit\\s+reset\\b",
+        "regex": true,
+        "description": "git reset state change - risk of losing commit history"
+      },
+      {
+        "pattern": "\\bgit\\s+rebase\\b",
+        "regex": true,
+        "description": "git rebase state change - risk of history corruption"
+      },
+      {
+        "pattern": "\\bgit\\s+merge\\b",
+        "regex": true,
+        "description": "git merge state change - risk of complex conflicts"
+      },
+      {
+        "pattern": "\\bnpm\\s+publish\\b",
+        "regex": true,
+        "description": "package publishing - publicly exposes code"
+      },
+      {
+        "pattern": "\\bnpm\\s+install\\b",
+        "regex": true,
+        "description": "dependency installation - fetches external, unverified code"
+      },
+      {
+        "pattern": "\\bnpm\\s+update\\b",
+        "regex": true,
+        "description": "dependency update - risk of breaking changes"
+      },
+      {
+        "pattern": "\\bnpm\\s+remove\\b",
+        "regex": true,
+        "description": "dependency removal - risk of broken dependencies"
+      },
+      {
+        "pattern": "\\bnpm\\s+uninstall\\b",
+        "regex": true,
+        "description": "dependency uninstallation - risk of broken dependencies"
+      },
+      {
+        "pattern": "\\byarn\\b",
+        "regex": true,
+        "description": "yarn package manager operation - potential for unwanted dependencies"
+      },
+      {
+        "pattern": "\\bpip\\s+install\\b",
+        "regex": true,
+        "description": "python package installation - fetches external, unverified code"
+      },
+      {
+        "pattern": "\\bpip\\s+upgrade\\b",
+        "regex": true,
+        "description": "python package upgrade - risk of breaking changes"
+      },
+      {
+        "pattern": "\\bpip\\s+uninstall\\b",
+        "regex": true,
+        "description": "python package uninstallation - risk of broken dependencies"
+      },
+      {
+        "pattern": "\\bgo\\s+get\\b",
+        "regex": true,
+        "description": "go dependency installation - fetches external code"
+      },
+      {
+        "pattern": "\\bcurl\\b",
+        "regex": true,
+        "description": "network request - potential for downloading unverified content"
+      },
+      {
+        "pattern": "\\bwget\\b",
+        "regex": true,
+        "description": "network download - potential for downloading unverified content"
+      },
+      {
+        "pattern": "\\bcrontab\\b",
+        "regex": true,
+        "description": "modifying scheduled tasks - potential for persistence/backdoors"
+      },
+      {
+        "pattern": "\\bvisudo\\b",
+        "regex": true,
+        "description": "editing sudoers file - risk of privilege escalation"
+      },
+      {
+        "pattern": "\\biptables\\b",
+        "regex": true,
+        "description": "modifying network firewall rules - potential for losing access"
+      },
+      {
+        "pattern": "\\bufw\\b",
+        "regex": true,
+        "description": "modifying firewall rules - potential for losing access"
+      },
+      {
+        "pattern": "\\bsystemctl\\b",
+        "regex": true,
+        "description": "modifying system services - potential for breaking system state"
+      },
+      {
+        "pattern": "\\breboot\\b",
+        "regex": true,
+        "description": "system restart - disruptive to service availability"
+      },
+      {
+        "pattern": "\\bshutdown\\b",
+        "regex": true,
+        "description": "system poweroff - disruptive to service availability"
+      },
+      {
+        "pattern": "\\bchroot\\b",
+        "regex": true,
+        "description": "changing root directory - potential for sandbox breakout"
+      },
+      {
+        "pattern": "\\bumount\\b",
+        "regex": true,
+        "description": "unmounting filesystems - disruptive to data access"
+      },
+      {
+        "pattern": "\\bln\\s+\\-s\\b",
+        "regex": true,
+        "description": "creating symlinks - potential for unauthorized file access"
+      },
+      {
+        "pattern": "\\bcurl\\b.*\\|",
+        "regex": true,
+        "description": "piping remote content to shell - extremely high risk of code execution"
+      },
+      {
+        "pattern": "\\bwget\\s+-O\\s+-\\s+.*\\|",
+        "regex": true,
+        "description": "piping remote download to shell - extremely high risk of code execution"
+      },
+      {
+        "pattern": "\\bbase64\\s+\\-d\\b",
+        "regex": true,
+        "description": "decoding encoded payloads - commonly used to hide malicious commands"
+      },
+      {
+        "pattern": "\\balias\\b",
+        "regex": true,
+        "description": "overriding shell commands - potential for command hijacking"
+      },
+      {
+        "pattern": "sed\\s+.*(-i|--in-place)",
+        "regex": true,
+        "description": "sed in-place edit - file modification (safe without -i)"
+      },
+      {
+        "pattern": "\\bnc\\s",
+        "regex": true,
+        "description": "netcat - network utility (not async/sync keywords)"
+      },
+      {
+        "pattern": "\\bncat\\b",
+        "regex": true,
+        "description": "network utility - potential for unauthorized connection"
+      },
+      {
+        "pattern": "\\bnmap\\b",
+        "regex": true,
+        "description": "network scanner - security posture exposure"
+      },
+      {
+        "pattern": "\\bssh\\b",
+        "regex": true,
+        "description": "remote access - potential for unauthorized remote connection"
+      },
+      {
+        "pattern": "\\bscp\\b",
+        "regex": true,
+        "description": "remote copy - potential for unauthorized data exfiltration"
+      },
+      {
+        "pattern": "\\brsync\\b",
+        "regex": true,
+        "description": "remote sync - potential for unauthorized data transfer"
+      },
+      {
+        "pattern": "\\bgit\\s+add\\b",
+        "regex": true,
+        "description": "git add state change - prepares files for tracking"
+      },
+      {
+        "pattern": "\\bgit\\s+commit\\b",
+        "regex": true,
+        "description": "git commit state change - permanently saves changes"
+      },
+      {
+        "pattern": "\\bgit\\s+push\\b",
+        "regex": true,
+        "description": "git push"
+      },
+      {
+        "pattern": "\\bgit\\s+tag\\b",
+        "regex": true,
+        "description": "git tag state change - creates markers in history"
+      },
+      {
+        "pattern": "\\bgit\\s+stash\\b",
+        "regex": true,
+        "description": "git stash state change - modifies local workspace"
+      },
+      {
+        "pattern": "\\bgit\\s+pull\\b",
+        "regex": true,
+        "description": "git pull state change - overwrites local files"
+      },
+      {
+        "pattern": "\\bgit\\s+fetch\\b",
+        "regex": true,
+        "description": "git fetch state change - contacts remote repository"
+      },
+      {
+        "pattern": "\\bapt\\b",
+        "regex": true,
+        "description": "system package manager - potential system modification"
+      },
+      {
+        "pattern": "\\byum\\b",
+        "regex": true,
+        "description": "system package manager - potential system modification"
+      },
+      {
+        "pattern": "\\bbrew\\b",
+        "regex": true,
+        "description": "homebrew system management - potential system modification"
+      },
+      {
+        "pattern": "\\bpacman\\b",
+        "regex": true,
+        "description": "system package manager - potential system modification"
+      },
+      {
+        "pattern": "\\bmysql\\b",
+        "regex": true,
+        "description": "database client - potential for direct database modification"
+      },
+      {
+        "pattern": "\\bpsql\\b",
+        "regex": true,
+        "description": "database client - potential for direct database modification"
+      },
+      {
+        "pattern": "\\bmongo\\b",
+        "regex": true,
+        "description": "database client - potential for direct database modification"
+      },
+      {
+        "pattern": "\\bredis\\-cli\\b",
+        "regex": true,
+        "description": "database client - potential for direct database modification"
+      },
+      {
+        "pattern": "\\bkill\\s+\\-9\\s+\\-1\\b",
+        "regex": true,
+        "description": "kill all user processes - system crash"
+      },
+      {
+        "pattern": ":\\(\\)\\{\\s+:\\|:\\&\\s+\\};:",
+        "regex": true,
+        "description": "fork bomb - process exhaustion, kernel panic"
+      },
+      {
+        "pattern": "\\bdestroy\\s+\\-auto\\-approve\\b",
+        "regex": true,
+        "description": "infrastructure deletion - bypasses confirmation"
+      },
+      {
+        "pattern": "\\bprune\\s+\\-af\\b",
+        "regex": true,
+        "description": "mass container/volume deletion - unrecoverable data loss"
+      },
+      {
+        "pattern": "\\bterraform\\b",
+        "regex": true,
+        "description": "infrastructure management - potential system modification"
+      },
+      {
+        "pattern": "\\baws\\s+s3\\s+rb\\b",
+        "regex": true,
+        "description": "S3 bucket deletion - permanent data loss"
+      },
+      {
+        "pattern": "\\bkubectl\\s+delete\\s+namespace\\b",
+        "regex": true,
+        "description": "Kubernetes namespace destruction - deletes all grouped resources"
+      },
+      {
+        "pattern": "\\bgcloud\\s+projects\\s+delete\\b",
+        "regex": true,
+        "description": "GCP project deletion - permanent data/billing loss"
+      },
+      {
+        "pattern": "\\bnpm\\s+config\\s+set\\s+registry\\b",
+        "regex": true,
+        "description": "supply chain attack - redirects package downloads to malicious registry"
+      },
+      {
+        "pattern": "\\bcurl\\b.*\\|.*\\bpython3\\b",
+        "regex": true,
+        "description": "remote code execution via Python interpreter"
+      },
+      {
+        "pattern": "\\bcurl\\b.*\\|.*\\bnode\\b",
+        "regex": true,
+        "description": "remote code execution via Node.js interpreter"
+      },
+      {
+        "pattern": "\\bcurl\\b.*\\|.*\\bruby\\b",
+        "regex": true,
+        "description": "remote code execution via Ruby interpreter"
+      },
+      {
+        "pattern": "\\bDROP\\s+TABLE\\b",
+        "regex": true,
+        "description": "database table deletion - permanent data loss"
+      },
+      {
+        "pattern": "\\bdb\\.dropDatabase\\b",
+        "regex": true,
+        "description": "MongoDB database deletion - permanent data loss"
+      },
+      {
+        "pattern": "\\bfind\\s+/\\s+\\-type\\s+f\\s+\\-exec\\s+rm\\b",
+        "regex": true,
+        "description": "delete all files on system - bypasses rm -rf limitations"
+      },
+      {
+        "pattern": "\\bruby\\b",
+        "regex": true,
+        "description": "Ruby interpreter - can execute arbitrary code"
+      },
+      {
+        "pattern": "\\bperl\\b",
+        "regex": true,
+        "description": "Perl interpreter - can execute arbitrary code"
+      },
+      {
+        "pattern": "\\bsh\\b",
+        "regex": true,
+        "description": "POSIX shell - can execute arbitrary code (not bash/ssh/ash)"
+      }
+    ]
+  },
+  "applyBuiltinDefaults": true,
+  "onboarding": {
+    "completed": true,
+    "completedAt": "2026-04-19T23:08:33.467Z",
+    "version": "0.9.0-20260327"
+  }
+}
