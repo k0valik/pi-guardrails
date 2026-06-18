@@ -1,54 +1,72 @@
-# Feature Design: `comment` Field for Deny Feedback
+# Feature Design: `comment` Field (Model Guidance) + Trigger Indicator (UI)
 
-> **Status:** Design proposal — not yet implemented
+> **Status:** Design proposal - updated 2026-06-18 per discussion
 > **Requested by:** k0valik
-> **Date:** 2026-06-17
+> **Date:** 2026-06-17 (updated 2026-06-18)
 
 ## Problem
 
-When the permission gate or policies block a command, the model receives a
-generic denial message:
+When the permission gate or policies block a command, two audiences suffer:
 
-- `"User denied dangerous command"` — when the user presses deny
-- `"Command auto-denied: {description}"` — for auto-deny patterns
-
-These messages don't tell the model **why** the command was denied or **what
-to do instead**. The model has no guidance on how to correct its behavior.
+1. **The human user** sees a generic prompt with no indication of *which* guardrail
+   rule caught the action. No quick way to assess risk vs false positive.
+2. **The model** receives a generic denial message like `"User denied dangerous
+   command"` with no guidance on what to do instead.
 
 ### Concrete example
 
 User has `npm install` in the permission gate patterns with a custom note:
-> "Use `pnpm install` instead"
+"> Use `pnpm install` instead"
 
-**Currently:**
-1. User sees the prompt: "Dangerous Command Detected — dependency installation"
-2. User presses `n` (deny)
-3. Model receives: `"User denied dangerous command"`
-4. Model has no idea why, tries `npm install` again, or tries `npm i` thinking that'll work
+**Currently (UI):**
+1. User sees the prompt: "Dangerous Command Detected - dependency installation"
+2. User has to inspect the command to figure out which rule matched
+3. User presses `n` (deny)
 
-**Desired:**
-1. User sees above the prompt: ⚠ "Use `pnpm install` instead"
-2. User presses `n` (deny)
-3. Model receives: `"Blocked by rule: dependency installation. Use pnpm install instead"`
-4. Model understands the constraint and switches to `pnpm install`
+**Currently (model):**
+1. Model receives: `"User denied dangerous command"`
+2. Model has no idea why, tries `npm install` again, or tries `npm i` thinking that'll work
+
+**Desired (UI):**
+1. User sees at the top of the prompt: ⚠ "Rule: dependency installation | Pattern: npm install"
+2. User immediately knows which guardrail caught it and can assess
+3. User presses `n` (deny) if appropriate
+
+**Desired (model):**
+1. Model receives: `"Blocked by rule: dependency installation. Use pnpm install instead"`
+2. Model understands the constraint and switches to `pnpm install`
+
+## Two-Audience Design Summary
+
+| Channel | Shows | Audience | Config change? |
+|---------|-------|----------|----------------|
+| **UI prompt** | The **trigger** - which rule/pattern matched | Human user | ❌ No - uses existing `safety.metadata` |
+| **Deny message** | The **`comment`** - guidance text like "Use pnpm instead" | Model/LLM | ✅ Yes - new optional `comment` field |
+
+These are complementary. The trigger helps the user assess the prompt; the comment
+helps the model correct its behavior. The original design proposal mixed both into
+the `comment` field - this update separates them.
+
+---
 
 ## Existing Mechanisms (What Already Works)
 
 The current codebase already has a `description` field on patterns and rules:
 
-- `DangerousPattern.description` — shown in the prompt (`"This command contains {description}"`)
-- `PatternConfig.description` — used by `formatAutoDenyReason()` → `"Command auto-denied: {description}"`
-- `PolicyRule.blockMessage` — used as the block reason in policies
+- `DangerousPattern.description` - shown in the prompt (`"This command contains {description}"`)
+- `PatternConfig.description` - used by `formatAutoDenyReason()` → `"Command auto-denied: {description}"`
+- `PolicyRule.blockMessage` - used as the block reason in policies
 
 But these serve a different purpose:
 
 | Field | Where shown | Where sent on deny |
 |-------|-------------|--------------------|
-| `description` | In the UI prompt header | **Nowhere** — replaced by `"User denied dangerous command"` |
+| `description` | In the UI prompt header | **Nowhere** - replaced by `"User denied dangerous command"` |
 | `blockMessage` | In the policy hook's notify | Used as-is |
-| `comment` (proposed) | **Above** the UI prompt | Sent to model on deny |
+| {{trigger}} (proposed) | **Top** of UI prompt | **Nowhere** - human-only |
+| `comment` (proposed) | **Not shown** in UI prompt | Sent to model on deny |
 
-None of the 12 forks analyzed in the audit cover this feature. It's novel.
+None of the 12 forks analyzed in the audit cover this feature pairing. It's novel.
 
 ## Proposed Solution
 
@@ -63,8 +81,8 @@ export interface PatternConfig {
   pattern: string;
   description?: string;   // existing: shown in prompt header
   regex?: boolean;
-  comment?: string;       // NEW: shown above prompt, sent on deny
-}
+  comment?: string;       // NEW: sent to model on deny, not shown in UI
+}  
 
 export interface PolicyRule {
   id: string;
@@ -82,39 +100,45 @@ export interface PolicyRule {
 
 `DangerousPattern extends PatternConfig`, so it inherits `comment` for free.
 
-### 2. Display comment in the TUI prompt
+### 2. Display the trigger in the TUI prompt (human user)
 
-When a `comment` is present, show it **above** the command/description section
-as a styled note box, before the action options:
+When the prompt fires, the top line shows what *caught* the action - sourced from
+metadata the system **already has** (`safety.metadata.description`,
+`safety.metadata.pattern`, `safety.reason`):
 
 ```
 ╔══════════════════════════════════════╗
-║  ⚠ Use pnpm install instead         ║  ← comment rendered as note
+║  ⚠ Rule: admin-commands              ║  ← trigger: rule name
+║     Pattern: npm install              ║  ← trigger: matched pattern
 ║  ─────────────────────────────       ║
-║  Dangerous Command Detected          ║
-║                                      ║
-║  This command contains dependency    ║
-║  installation:                       ║
-║                                      ║
-║   1│ npm install lodash              ║
+║  The model wants to run:             ║
+║  $ npm install lodash                ║
 ║                                      ║
 ║  Allow execution?                    ║
-║  y/enter: allow • a: session •       ║
-║  n/esc: deny                         ║
 ╚══════════════════════════════════════╝
 ```
 
 Implementation in `extensions/permission-gate/prompt.ts`:
 
-- Add optional `comment?: string` parameter to `createPermissionGateConfirmComponent`
-- If comment is present, add a `DynamicBorder(warningColour)` + `Text(comment)` block
-  before the command section
-- The comment should use `ctx.ui.theme.fg("warning", comment)` or similar distinct
-  styling so it visually separates from the description
+- Reorder the prompt component to render `safety.metadata` info at the top,
+  before the command preview
+- Show rule name (from `metadata.description` or auto-labelled)
+  and the specific pattern that matched (`metadata.pattern`)
+- No new parameters needed - the metadata is already passed through
 
-For policies, the `createConfirmationUI` from nikitakot's fork (see audit
-findings, feature 2) already supports a `subtitle` field — `comment` could be
-an additional `note` parameter or be rendered into the subtitle area.
+For path-access (`extensions/path-access/prompt.ts`):
+
+- Show the command + target path that triggered the boundary check
+- Surface the matched `allowedPaths` entry if relevant
+
+For policies (`extensions/guardrails/index.ts`):
+
+- When `checkAction` returns a match, include the `ruleId` + `protection` in
+  the block notification so the user sees which policy rule fired
+
+This is **purely a rendering change** - the data already flows through
+`safety.metadata`. No new config fields, no migration, no schema update.
+
 
 ### 3. Return comment to the model on deny
 
@@ -148,6 +172,7 @@ export function formatAutoDenyReason(pattern: PatternConfig): string {
 - In `createPolicyRules`, thread `policy.comment` into metadata
 - In `setupPolicyHook`, use `safety.metadata?.comment` if present to build
   the block reason
+
 
 ### 4. Thread comment through the metadata pipeline
 
@@ -255,54 +280,61 @@ components (see `pattern-editor.ts` usage).
 |------|--------|
 | `src/shared/config/types.ts` | Add `comment?: string` to `PatternConfig`, `PolicyRule` |
 | `src/shared/config/defaults.ts` | Add `comment` to built-in patterns where useful |
+| `src/shared/matching.ts` | Thread `comment` through pattern compilation (already on `PatternConfig`) |
 | `extensions/permission-gate/rules.ts` | Add `comment` to `PermissionGateMeta`; update `formatAutoDenyReason` |
-| `extensions/permission-gate/prompt.ts` | Add `comment` param to `createPermissionGateConfirmComponent`; render comment above command section |
-| `extensions/permission-gate/index.ts` | Use `safety.metadata.comment` in deny reason; pass comment to prompt |
+| `extensions/permission-gate/prompt.ts` | **(Trigger indicator)** Reorder to show `safety.metadata` at top - no `comment` rendering here |
+| `extensions/permission-gate/index.ts` | Use `safety.metadata.comment` in deny reason |
 | `extensions/guardrails/rules.ts` | Add `comment` to `CompiledPolicy`, `PolicyMeta`; thread through `createPolicyRules` |
 | `extensions/guardrails/index.ts` | Use `safety.metadata.comment` in block reason for policies |
 | `extensions/guardrails/components/pattern-editor.ts` | Add `comment` field to pattern editor form |
 | `extensions/guardrails/commands/settings/index.ts` | Add `comment` field to policy rule editor |
 | `schema.json` | Update JSON schema with `comment` field |
 
+
 ## Prior Art in Forks
 
-None of the 12 forks analyzed cover this feature. Closest related work:
+None of the 12 forks analyzed cover this feature pairing (trigger + comment).
+Closest related work:
 
-- **qw457812** / **nikitakot** — `requireConfirmation`/`askConfirmation` on policies
+- **qw457812** / **nikitakot** - `requireConfirmation`/`askConfirmation` on policies
   adds an interactive confirmation dialog, but the deny message is still generic.
-  The `createConfirmationUI` from nikitakot's fork provides the right component
-  architecture to extend with a comment display.
-- **phulot** — auto-deny patterns with descriptive messages (`formatAutoDenyReason`
+  The trigger indicator would surface in their `createConfirmationUI` naturally.
+- **phulot** - auto-deny patterns with descriptive messages (`formatAutoDenyReason`
   already exists). The `comment` field extends this with model-facing feedback.
-- **prullanferragut** — example pattern fix. If we add `comment` to built-in
+- **prullanferragut** - example pattern fix. If we add `comment` to built-in
   defaults, the examples should also include comments.
+
 
 ## Relationship to Existing Features
 
-| Existing | This feature | Relationship |
-|----------|--------------|--------------|
-| `description` on patterns | `comment` on patterns | Complementary. `description` labels the risk for the prompt header; `comment` guides both user and model on alternatives. |
-| `blockMessage` on PolicyRule | `comment` on PolicyRule | `blockMessage` is the default block reason; `comment` overrides/supplements it with model-facing guidance. |
+| Existing | Feature | Relationship |
+|----------|---------|--------------|
+| `description` on patterns | `comment` on patterns | Complementary. `description` labels the risk in the prompt header; `comment` sends model-facing guidance on deny. |
+| `description` on patterns | Trigger indicator | Same source field - the `description` / `pattern` from `safety.metadata` is surfaced at the top of the UI prompt. |
+| `blockMessage` on PolicyRule | `comment` on PolicyRule | `blockMessage` is the default block reason; `comment` supplements it with model-facing guidance. |
 | `formatAutoDenyReason(description)` | `formatAutoDenyReason(comment?)` | `comment` takes priority over `description` for auto-deny. |
-| `requireConfirmation` (qw457812) | comment in confirmation dialog | The dialog shows the comment above the prompt, and uses it on deny. |
+| `requireConfirmation` (qw457812) | Trigger indicator + comment | The confirmation dialog's subtitle area shows the trigger; the deny message includes the comment. |
 | Built-in defaults | comment in defaults | Adding comments to default rules makes them more usable out of the box. |
+
 
 ## Effort Estimate
 
 | Component | Effort | Dependencies |
 |-----------|--------|-------------|
-| Config types | Low (~5 lines) | None |
+| Config types (`comment` field) | Low (~5 lines) | None |
 | Permission gate metadata + deny reason | Low (~15 lines) | Config types |
 | Auto-deny reason | Low (~5 lines) | Config types |
-| Permission gate prompt comment display | Low (~15 lines) | None |
+| Trigger indicator (permission gate prompt) | Low (~10 lines) | None - uses existing metadata |
+| Trigger indicator (path-access prompt) | Low (~10 lines) | None - uses existing metadata |
 | Policy comment integration | Low (~15 lines) | Config types |
 | Settings UI pattern editor | Low (~20 lines) | None |
 | Settings UI rule editor | Low (~20 lines) | None |
 | Built-in defaults | Low (~15 entries) | Config types |
-| **Subtotal (core)** | **~95 lines** | |
+| **Subtotal (core)** | **~100 lines** | |
 | Deny-with-reason interactive input | Medium (~60 lines) | Core implementation |
 | Schema update | Low (~10 lines) | Config types |
-| **Total** | **~165 lines** | |
+| **Total** | **~170 lines** | |
+
 
 ## Future Considerations
 

@@ -6,56 +6,81 @@
 
 ---
 
-## 0. First: Your Feedback on the `comment` Feature
+## 0. Clarification: The `comment` Feature Has Two Audiences
 
-The `feature-comment-denied-reason.md` proposal suggested a static `comment` field on patterns/rules — human-written text like "Use pnpm instead." You've said that's not quite what you want.
+The `feature-comment-denied-reason.md` design proposal mixed two concerns into one field.
+You've clarified the split:
 
-**What you actually want:** When the UI prompt fires, show **what triggered it** at the top — the specific command, pattern, or guardrail rule that matched. The user (you) gets immediate visual feedback of *which guardrail caught the action*, so you can quickly assess whether it's a real risk or a false positive without having to read through the whole prompt.
+| Channel | What to show | Audience |
+|---------|-------------|----------|
+| **UI prompt** (for you) | The **trigger** - which rule/pattern matched | Human user |
+| **Deny message** (sent back) | The **`comment`** - guidance text like "Use pnpm instead" | Model/LLM |
 
-This shifts the design from **"author provides guidance text"** to **"system shows its working."** It's a transparency/auditability concern, not a UX-copywriting concern.
+These are **complementary**, not alternatives. Both should exist:
 
-### Revised design sketch
+---
 
-Instead of:
+### UI: The Trigger Indicator (for the human user)
+
+When the prompt fires, the top line shows what *caught* the action:
+
 ```
 ╔══════════════════════════════════════╗
-║  ⚠ Use pnpm install instead         ║  ← static comment
-║  ─────────────────────────────       ║
-║  Dangerous Command Detected          ║
-╚══════════════════════════════════════╝
-```
-
-You want something like:
-```
-╔══════════════════════════════════════╗
-║  ⚠ [admin-commands]: npm install    ║  ← <rule-name>: <matched-pattern>
+║  ⚠ Rule: admin-commands              ║  ← trigger: rule name
+║     Pattern: npm install              ║  ← trigger: matched pattern
 ║  ─────────────────────────────       ║
 ║  The model wants to run:             ║
 ║  $ npm install lodash                ║
 ║                                      ║
-║  Rule: dependency installation       ║
-║  Pattern: npm install                ║
+║  Allow execution?                    ║
 ╚══════════════════════════════════════╝
 ```
 
-Where the top line shows:
-- **Which feature caught it**: permission-gate (dangerous pattern) / policy / path-access
-- **Which rule/pattern matched** (if named): the `description` or an auto-generated label
-- **The actual command/action** that triggered
+This surfaces metadata the system **already has** (`safety.metadata.description`,
+`safety.metadata.pattern`, `safety.reason`) - no new config fields needed.
+It answers: *"Which guardrail caught this?"* at a glance.
 
-This is **strictly simpler** than the `comment` proposal — no new config fields, no new persistence, no model-facing strings. It's a pure UI rendering change: surface the metadata you *already have* (`safety.metadata.description`, `safety.metadata.pattern`, `safety.reason`) in a more prominent position.
+### Model feedback: The `comment` field (for the LLM)
 
-### Surface area for this
+The `comment` field from the original proposal remains. It's a per-pattern/per-rule
+string that is:
 
-| Layer | File | Change |
-|-------|------|--------|
-| Permission gate prompt | `extensions/permission-gate/prompt.ts` | Add trigger-summary header line showing matched rule/pattern |
-| Path access prompt | `extensions/path-access/prompt.ts` | Show which allowedPaths entry triggered (if denied), or the command + target path |
-| Policy deny feedback | `extensions/guardrails/index.ts` | When `checkAction` returns a match, emit the ruleId + protection in the prompt |
-| Permission gate rules | `extensions/permission-gate/rules.ts` | Already has `PermissionGateMeta` with `{command, description, pattern}` — just need to surface it higher |
-| Policy rules | `extensions/guardrails/rules.ts` | `PolicyMeta` has `{ruleId, protection, path}` — also already sufficient |
+1. **Not** rendered in the UI prompt (the trigger indicator replaces that)
+2. **Sent to the model** when the action is denied, as part of the deny reason:
 
-**Architecture fit:** ✅ Clean — no new fields, no config schema changes, no migration. Pure rendering of existing metadata. The three features (permission-gate, path-access, policies) already have the data; they just don't prioritize it visually.
+   ```
+   "Blocked by rule: dependency installation. Use pnpm instead"
+   ```
+
+The `comment` field still needs to be added to `PatternConfig` / `PolicyRule`,
+threaded through the metadata pipeline, and included in the deny message.
+The original proposal's sections 3 (Return comment to model) and 5 (Settings UI)
+are still valid - just skip section 2 (Display comment in TUI prompt).
+
+### The confusion (my bad)
+
+My earlier draft in Section 0 presented these as a binary choice - trigger *or* comment.
+That was wrong. The correct design is:
+
+- **UI**: Show the trigger (dynamic - what matched)
+- **Model**: Send the comment (author-defined - what to do instead)
+
+Both live in the same deny flow, just rendered to different consumers.
+
+### Surface area for both
+
+| Concern | What to add | Where | Config change? |
+|---------|------------|-------|----------------|
+| Trigger in UI | Reorder prompt component to show `safety.metadata` info at top | `extensions/permission-gate/prompt.ts`, `extensions/path-access/prompt.ts` | ❌ No - uses existing metadata |
+| Trigger in policy blocks | Surface `PolicyMeta` in the block notification | `extensions/guardrails/index.ts` | ❌ No |
+| `comment` field | Add `comment?: string` to `PatternConfig`, `PolicyRule` | `src/shared/config/types.ts` | ✅ Yes - new optional field |
+| `comment` → model | Use `safety.metadata.comment` in deny reason on deny | `extensions/permission-gate/index.ts`, `extensions/permission-gate/rules.ts` | ❌ No - reads the new field |
+| `comment` → model (policies) | Thread comment through `PolicyMeta` → deny reason | `extensions/guardrails/rules.ts`, `extensions/guardrails/index.ts` | ❌ No |
+| `comment` in settings | Add field to pattern editor + rule editor | `extensions/guardrails/components/pattern-editor.ts`, `extensions/guardrails/commands/settings/index.ts` | ❌ No - UI reads config shape |
+
+**Architecture fit overall:** ✅ Clean. The two concerns touch different layers (UI
+rendering vs data model) and don't conflict. The `comment` field is ~5 lines in
+types.ts; the trigger indicator is ~20 lines of prompt reordering.
 
 ---
 

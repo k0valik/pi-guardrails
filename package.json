@@ -49,6 +49,7 @@
     "@types/node": "^25.0.10",
     "husky": "^9.1.7",
     "memfs": "^4.57.2",
+    "shell-quote": "^1.8.4",
     "ts-json-schema-generator": "^2.9.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.4"
