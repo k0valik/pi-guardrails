@@ -1,1 +1,15 @@
-onlyBuiltDependencies: koffi protobufjs
+onlyBuiltDependencies:
+  - ' '
+  - '@google/genai'
+  - b
+  - f
+  - i
+  - j
+  - k
+  - o
+  - p
+  - protobufjs
+  - r
+  - s
+  - t
+  - u
